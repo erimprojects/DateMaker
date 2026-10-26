@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Post voor jou 💌</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     ✏️  PAS HIER JE TEKSTEN AAN  →  zie het CONFIG-blok onderaan
+     ============================================================ */
+  :root {
+    --bg: #fbf3ec;
+    --paper: #fffaf5;
+    --ink: #3a1d22;
+    --muted: #8a6a6e;
+    --rose: #d8445f;
+    --rose-dark: #a92c45;
+    --blush: #f6d3d6;
+    --gold: #e0a84f;
+    --line: #ecd8d2;
+    --shadow: 0 10px 30px rgba(120, 40, 55, .12);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "DM Sans", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  h1, h2, h3 { font-family: "Fraunces", Georgia, serif; font-weight: 700; line-height: 1.1; margin: 0; }
+  em { font-family: "Fraunces", Georgia, serif; font-style: italic; color: var(--rose); }
+  button { font: inherit; cursor: pointer; }
+  .hidden { display: none !important; }
+
+  /* ---------- Envelop / wachtwoord ---------- */
+  #gate {
+    position: fixed; inset: 0; z-index: 50;
+    display: grid; place-items: center;
+    padding: 24px 16px;
+    background: radial-gradient(circle at 50% 30%, #fff 0%, var(--bg) 60%);
+    transition: opacity .8s ease, visibility .8s;
+  }
+  #gate.gone { opacity: 0; visibility: hidden; }
+  .gate-inner { text-align: center; max-width: 360px; width: 100%; }
+  .gate-inner p.small { color: var(--muted); margin: 6px 0 28px; }
+  .envelope {
+    position: relative; width: 240px; height: 160px; margin: 0 auto 32px;
+    background: var(--blush); border-radius: 6px; box-shadow: var(--shadow);
+    cursor: pointer; animation: wobble 2.6s ease-in-out infinite;
+  }
+  .envelope::before { /* flap */
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 0;
+    border-left: 120px solid transparent; border-right: 120px solid transparent;
+    border-top: 90px solid #efbcc2; transform-origin: top; transition: transform .6s ease;
+    z-index: 2;
+  }
+  .envelope::after { /* bottom fold */
+    content: ""; position: absolute; inset: auto 0 0 0;
+    border-left: 120px solid #f3c7cc; border-right: 120px solid #f3c7cc;
+    border-top: 80px solid transparent; border-radius: 0 0 6px 6px; z-index: 1;
+  }
+  .envelope .seal {
+    position: absolute; left: 50%; top: 70px; transform: translate(-50%, -50%);
+    width: 46px; height: 46px; border-radius: 50%; background: var(--rose);
+    display: grid; place-items: center; color: #fff; font-size: 20px; z-index: 3;
+    box-shadow: 0 3px 8px rgba(0,0,0,.2); transition: opacity .3s;
+  }
+  .envelope.open { animation: none; }
+  .envelope.open::before { transform: rotateX(180deg); z-index: 0; }
+  .envelope.open .seal { opacity: 0; }
+  @keyframes wobble { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg) translateY(-4px); } }
+
+  .pw { display: flex; gap: 8px; }
+  .pw input {
+    flex: 1; min-width: 0; padding: 14px 16px; border-radius: 999px;
+    border: 2px solid var(--line); background: #fff; color: var(--ink);
+    font: inherit; outline: none; text-align: center;
+  }
+  .pw input:focus { border-color: var(--rose); }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+  .hint { color: var(--muted); font-size: 14px; margin-top: 12px; min-height: 1.5em; }
+
+  .btn {
+    border: 0; border-radius: 999px; padding: 14px 24px;
+    background: var(--rose); color: #fff; font-weight: 700;
+    box-shadow: 0 6px 16px rgba(216, 68, 95, .35);
+    transition: transform .15s ease, background .2s;
+  }
+  .btn:hover { background: var(--rose-dark); }
+  .btn:active { transform: scale(.96); }
+  .btn.ghost { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: none; }
+
+  /* ---------- Verhaal-animatie ---------- */
+  #story {
+    position: fixed; inset: 0; z-index: 40; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 56px 16px 64px; transition: opacity .8s ease, visibility .8s;
+  }
+  #story.gone { opacity: 0; visibility: hidden; }
+  .skip { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 12px; background: none; border: 0; color: var(--muted); font-weight: 700; padding: 10px; }
+  .stage { position: relative; width: 100%; max-width: 480px; aspect-ratio: 360 / 400; }
+  .scene { position: absolute; inset: 0; opacity: 0; transition: opacity .7s ease; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+  .scene.active { opacity: 1; }
+  .scene svg { width: 100%; height: auto; display: block; border-radius: 24px; box-shadow: var(--shadow); }
+  .cap { font-family: "Fraunces", serif; font-weight: 700; font-size: clamp(21px, 5.8vw, 27px); line-height: 1.2; text-align: center; margin: 20px 0 0; opacity: 0; transform: translateY(10px); }
+  .cap2 { color: var(--muted); text-align: center; margin: 8px 0 0; opacity: 0; transform: translateY(10px); }
+  .scene.active .cap { animation: capIn .7s .3s forwards; }
+  .scene.active .cap2 { animation: capIn .7s 1.8s forwards; }
+  @keyframes capIn { to { opacity: 1; transform: none; } }
+  .progress { position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(480px, calc(100% - 32px)); height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .progress span { display: block; height: 100%; width: 0; background: var(--rose); }
+  .finale { margin: auto 0; text-align: center; }
+  .finale .when { font-family: "Fraunces", serif; font-style: italic; color: var(--rose); font-size: 22px; }
+  .finale h2 { font-size: clamp(34px, 10vw, 52px); margin: 10px 0 16px; }
+  .finale .later { color: var(--muted); font-size: 18px; }
+  .finale > * { opacity: 0; }
+  .scene.active .finale > * { animation: capIn .8s forwards; }
+  .scene.active .finale > :nth-child(2) { animation-delay: .9s; }
+  .scene.active .finale > :nth-child(3) { animation-delay: 2.2s; }
+
+  .scene.active .walk-in { animation: walkIn 1.8s ease-out both; }
+  @keyframes walkIn { from { transform: translateX(-230px); } }
+  .scene.active .bob { animation: bob2 .45s ease-in-out infinite alternate; }
+  @keyframes bob2 { to { transform: translateY(-4px); } }
+  .scene.active .scroll-bg { animation: scrollBg 5s linear infinite; }
+  @keyframes scrollBg { to { transform: translateX(-360px); } }
+  .pop { opacity: 0; transform-box: fill-box; transform-origin: center; }
+  .scene.active .pop { animation: popIn .5s cubic-bezier(.3,1.6,.5,1) forwards; animation-delay: var(--d, 0s); }
+  @keyframes popIn { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
+  .door { transform-box: fill-box; transform-origin: left center; }
+  .scene.active .door { animation: doorOpen 1s 1.2s ease-in-out forwards; }
+  @keyframes doorOpen { to { transform: scaleX(.12); } }
+  .heart-up { opacity: 0; transform-box: fill-box; transform-origin: center; }
+  .scene.active .heart-up { animation: heartUp 2.6s ease-out infinite; animation-delay: var(--d); }
+  @keyframes heartUp { 0% { opacity: 0; transform: translateY(0) scale(.5); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-80px) scale(1.2); } }
+  .scene.active .twinkle { animation: twinkle 1.6s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
+  @keyframes twinkle { to { opacity: .2; } }
+  .scene.active .ring { animation: ring .25s ease-in-out 6 alternate; animation-delay: var(--d, 0s); transform-box: fill-box; transform-origin: center; }
+  @keyframes ring { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+
+  .replay { margin-top: 26px; background: none; border: 0; color: var(--rose); font-weight: 700; padding: 8px 12px; }
+
+  /* ---------- Layout ---------- */
+  section { padding: 72px 16px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .kicker {
+    text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 700;
+    color: var(--rose); margin-bottom: 10px;
+  }
+  section h2 { font-size: clamp(30px, 7vw, 44px); margin-bottom: 14px; }
+  section p.lead { color: var(--muted); margin: 0 0 28px; }
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s ease, transform .8s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- Hero ---------- */
+  #hero { min-height: 100svh; display: grid; place-items: center; text-align: center; position: relative; }
+  #hero h1 { font-size: clamp(48px, 14vw, 96px); letter-spacing: -.02em; }
+  #hero .typed { font-size: clamp(18px, 4.6vw, 22px); color: var(--muted); min-height: 3.2em; margin: 18px auto 0; max-width: 460px; }
+  .caret { display: inline-block; width: 2px; height: 1.1em; background: var(--rose); vertical-align: -3px; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .scroll-cue { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: 14px; animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translate(-50%, 6px); } }
+  .floaty { position: fixed; pointer-events: none; z-index: 0; font-size: 22px; opacity: .5; animation: rise linear forwards; }
+  @keyframes rise { from { transform: translateY(0) rotate(0); opacity: .6; } to { transform: translateY(-110vh) rotate(40deg); opacity: 0; } }
+  main { position: relative; z-index: 1; }
+
+  /* ---------- Teller ---------- */
+  .counter { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .unit { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 18px 6px; text-align: center; box-shadow: var(--shadow); }
+  .unit b { display: block; font-family: "Fraunces", serif; font-size: clamp(26px, 7vw, 40px); font-variant-numeric: tabular-nums; color: var(--rose); }
+  .unit span { font-size: 13px; color: var(--muted); }
+  .fact { margin-top: 18px; text-align: center; color: var(--muted); font-size: 15px; }
+
+  /* ---------- Vraag ---------- */
+  #vraag .card { background: var(--paper); border-radius: 28px; padding: 36px 20px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--line); }
+  #vraag h3 { font-size: clamp(26px, 6.5vw, 36px); margin-bottom: 26px; }
+  .arena { position: relative; min-height: 180px; display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  #yes { position: relative; z-index: 3; transition: transform .25s ease, padding .25s ease, font-size .25s ease; }
+  #no { transition: left .25s ease, top .25s ease, transform .2s; z-index: 2; }
+  #no.loose { position: absolute; }
+  #answer { margin-top: 18px; font-size: 18px; }
+
+  /* ---------- Ticket ---------- */
+  .ticket {
+    background: var(--rose); color: #fff; border-radius: 22px; overflow: hidden;
+    box-shadow: 0 18px 40px rgba(169, 44, 69, .35);
+    animation: pop .7s cubic-bezier(.3,1.5,.5,1);
+  }
+  @keyframes pop { from { transform: scale(.85) rotate(-3deg); opacity: 0; } }
+  .t-top { padding: 26px 22px 20px; }
+  .t-label { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .8; font-weight: 700; }
+  .t-title { font-family: "Fraunces", serif; font-weight: 700; font-size: clamp(32px, 9vw, 44px); line-height: 1.05; margin-top: 8px; }
+  .t-for { font-family: "Fraunces", serif; font-style: italic; font-size: 20px; margin-top: 4px; }
+  .t-tear { position: relative; height: 0; border-top: 2px dashed rgba(255,255,255,.55); margin: 0 18px; }
+  .t-tear::before, .t-tear::after { content: ""; position: absolute; top: -14px; width: 26px; height: 26px; border-radius: 50%; background: var(--bg); }
+  .t-tear::before { left: -32px; } .t-tear::after { right: -32px; }
+  .t-body { padding: 20px 22px 22px; }
+  .t-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  .t-grid small { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+  .t-grid b { font-size: 16px; line-height: 1.3; }
+  .t-barcode { height: 54px; margin-top: 22px; border-radius: 6px; background: #fff;
+    background-image: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 5px, var(--ink) 5px 6px, transparent 6px 9px, var(--ink) 9px 13px, transparent 13px 15px); background-origin: content-box; padding: 8px; }
+  .t-no { font-size: 12px; letter-spacing: .14em; text-align: center; margin-top: 8px; opacity: .85; }
+  .t-actions { display: grid; gap: 10px; margin-top: 22px; }
+
+  /* ---------- Brieven ---------- */
+  .letters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .letter { perspective: 900px; height: 170px; }
+  .letter-inner { position: relative; width: 100%; height: 100%; transition: transform .7s cubic-bezier(.2,.8,.2,1); transform-style: preserve-3d; cursor: pointer; }
+  .letter.flipped .letter-inner { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; justify-content: center; text-align: center; box-shadow: var(--shadow); }
+  .face.front { background: var(--blush); }
+  .face.front small { color: var(--rose-dark); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: 11px; }
+  .face.front strong { font-family: "Fraunces", serif; font-size: 18px; margin-top: 6px; }
+  .face.back { background: #fff; transform: rotateY(180deg); font-size: 15px; overflow: auto; border: 1px solid var(--line); }
+
+  /* ---------- Bonnen ---------- */
+  .coupons { display: grid; gap: 14px; }
+  .coupon {
+    position: relative; display: flex; align-items: center; gap: 14px;
+    background: var(--paper); border: 2px dashed var(--gold); border-radius: 16px;
+    padding: 16px 16px 16px 18px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .coupon .emoji { font-size: 30px; flex: none; }
+  .coupon .txt { flex: 1; min-width: 0; }
+  .coupon .txt strong { display: block; font-family: "Fraunces", serif; font-size: 19px; }
+  .coupon .txt span { font-size: 14px; color: var(--muted); }
+  .coupon button { flex: none; padding: 10px 14px; font-size: 14px; }
+  .coupon.used { opacity: .65; }
+  .coupon.used button { display: none; }
+  .stamp {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%) rotate(-14deg) scale(2);
+    border: 3px solid var(--rose); color: var(--rose); font-weight: 700; letter-spacing: .08em;
+    padding: 4px 10px; border-radius: 8px; font-size: 13px; opacity: 0; transition: all .35s cubic-bezier(.3,1.6,.5,1);
+    background: rgba(255,255,255,.7);
+  }
+  .coupon.used .stamp { opacity: 1; transform: translateY(-50%) rotate(-14deg) scale(1); }
+  .note { font-size: 14px; color: var(--muted); text-align: center; margin-top: 18px; }
+
+  /* ---------- Slot ---------- */
+  #slot { text-align: center; padding-bottom: 110px; }
+  #slot .big-heart { font-size: 64px; display: inline-block; animation: beat 1.2s ease-in-out infinite; cursor: pointer; user-select: none; }
+  @keyframes beat { 0%,100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+  #slot p { max-width: 460px; margin: 18px auto 0; font-size: 18px; }
+  .sig { font-family: "Fraunces", serif; font-style: italic; font-size: 24px; color: var(--rose); margin-top: 18px; }
+
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+
+  @media (min-width: 640px) {
+    .letters { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .reveal { opacity: 1; transform: none; }
+    .pop, .cap, .cap2, .finale > * { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+
+<!-- Envelop + wachtwoord -->
+<div id="gate">
+  <div class="gate-inner">
+    <div class="envelope" id="envelope" aria-hidden="true"><div class="seal">♥</div></div>
+    <h1 style="font-size:30px" id="gateTitle">Er is post voor jou</h1>
+    <p class="small" id="gateSub">Maar alleen als je het geheime woord weet…</p>
+    <form class="pw" id="pwForm" autocomplete="off">
+      <input id="pw" type="text" inputmode="text" placeholder="geheim woord" aria-label="Geheim woord">
+      <button class="btn" type="submit">Open</button>
+    </form>
+    <div class="hint" id="hint"></div>
+  </div>
+</div>
+
+<!-- Animatie: hoe het begon -->
+<div id="story" class="hidden" aria-label="Hoe het begon">
+  <button class="skip" id="skip">Overslaan ›</button>
+  <div class="stage" id="stage"></div>
+  <div class="progress"><span id="storyBar"></span></div>
+</div>
+
+<main id="site" aria-hidden="true">
+
+  <section id="hero">
+    <div>
+      <div class="kicker">Speciaal voor</div>
+      <h1 id="heroName">jou</h1>
+      <p class="typed"><span id="typed"></span><span class="caret"></span></p>
+      <button class="replay" id="replay">▶ Bekijk nog een keer hoe het begon</button>
+    </div>
+    <div class="scroll-cue">scroll naar beneden ↓</div>
+  </section>
+
+  <section id="teller">
+    <div class="wrap reveal">
+      <div class="kicker">De klok tikt</div>
+      <h2>We zijn al samen sinds <em id="sinceText">…</em></h2>
+      <p class="lead">En dit stopt dus niet meer.</p>
+      <div class="counter">
+        <div class="unit"><b id="cD">0</b><span>dagen</span></div>
+        <div class="unit"><b id="cH">0</b><span>uur</span></div>
+        <div class="unit"><b id="cM">0</b><span>min</span></div>
+        <div class="unit"><b id="cS">0</b><span>sec</span></div>
+      </div>
+      <p class="fact" id="fact"></p>
+    </div>
+  </section>
+
+  <section id="vraag">
+    <div class="wrap reveal">
+      <div class="kicker">Een belangrijke vraag</div>
+      <div class="card">
+        <h3 id="question">…</h3>
+        <div class="arena" id="arena">
+          <button class="btn" id="yes">Ja!</button>
+          <button class="btn ghost" id="no">Nee</button>
+        </div>
+        <div id="answer"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ticketSection" class="hidden">
+    <div class="wrap">
+      <div class="kicker">Officieel bevestigd</div>
+      <h2>Je <em>ticket</em></h2>
+      <p class="lead">Bewaar 'm goed. Zonder ticket geen date (grapje, je mag altijd mee).</p>
+      <div class="ticket" id="ticket">
+        <div class="t-top">
+          <div class="t-label">Toegangsbewijs · 1 persoon</div>
+          <div class="t-title" id="tTitle"></div>
+          <div class="t-for">voor <span id="tName"></span></div>
+        </div>
+        <div class="t-tear"></div>
+        <div class="t-body">
+          <div class="t-grid">
+            <div><small>Datum</small><b id="tDate"></b></div>
+            <div><small>Tijd</small><b id="tTime"></b></div>
+            <div><small>Locatie</small><b id="tLoc"></b></div>
+            <div><small>Ophalen</small><b id="tPick"></b></div>
+            <div><small>Dresscode</small><b id="tDress"></b></div>
+            <div><small>Meenemen</small><b id="tBring"></b></div>
+          </div>
+          <div class="t-barcode" aria-hidden="true"></div>
+          <div class="t-no" id="tNo"></div>
+        </div>
+      </div>
+      <div class="t-actions">
+        <button class="btn" id="dlTicket">📲 Ticket bewaren</button>
+        <button class="btn ghost" id="addCal">📅 Zet in mijn agenda</button>
+      </div>
+      <p class="note">Tip: bij "Ticket bewaren" kies je "Bewaar afbeelding", dan staat hij in je foto's.</p>
+    </div>
+  </section>
+
+  <section id="brieven">
+    <div class="wrap reveal">
+      <div class="kicker">Kleine briefjes</div>
+      <h2>Open <em>als…</em></h2>
+      <p class="lead">Tik op een briefje. Maar alleen als het echt zo is, hè.</p>
+      <div class="letters" id="letters"></div>
+    </div>
+  </section>
+
+  <section id="bonnen">
+    <div class="wrap reveal">
+      <div class="kicker">Je cadeau</div>
+      <h2>Het officiële <em>bonnenboekje</em></h2>
+      <p class="lead">Geldig zolang ik leef. Niet inwisselbaar voor geld.</p>
+      <div class="coupons" id="coupons"></div>
+      <p class="note" id="couponNote"></p>
+    </div>
+  </section>
+
+  <section id="slot">
+    <div class="wrap reveal">
+      <span class="big-heart" id="bigHeart" role="button" aria-label="Hartje">❤️</span>
+      <p id="closing"></p>
+      <div class="sig" id="sig"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ==================================================================
+   ✏️  CONFIG: verander alleen dit blok
+   ================================================================== */
+const CONFIG = {
+  naam: "Amanda",
+  van: "Erim",
+
+  // Het geheime woord (hoofdletters maken niet uit). Bijv. jullie eerste date-plek, of een bijnaam.
+  wachtwoord: "amanda",
+  // Hints die na elke foute poging verschijnen
+  hints: [
+    "Hmm, nee 😏",
+    "Hint: jouw eigen naam…",
+    "Echt, typ gewoon je naam 😂",
+  ],
+
+  // Wanneer werden jullie een stel? (jaar-maand-dagTuur:minuut)
+  samenSinds: "2024-02-17T00:00",
+
+  // Het animatiefilmpje over hoe het begon
+  verhaal: {
+    vriend: "Lennart",
+    vriendin: "Lennarts vriendin", // zet hier haar naam neer
+    winkel: "SERİFOĞLU",
+  },
+
+  // Typ-tekst in het begin (één regel per zin)
+  intro: [
+    "Ik heb een website voor je gebouwd.",
+    "Ja, echt. Een hele website.",
+    "Omdat een kaartje te makkelijk was. ❤️",
+  ],
+
+  vraag: "Ga je op vrijdag 6 november mee op een verrassingsdate?",
+  // Wat de Nee-knop zegt als ze 'm probeert te pakken
+  neeTeksten: ["Nee", "Weet je het zeker?", "Echt?", "Denk nog even na…", "Foute knop 😤", "Je kan 'm niet pakken", "Oké nu is het sneu", "Gewoon ja zeggen"],
+  jaAntwoord: "Yesss! 🎉 Goed antwoord. Hieronder staat je ticket.",
+
+  // Het dateticket dat ze krijgt na "Ja"
+  date: {
+    titel: "Verrassingsdate",
+    start: "2026-11-06T18:30",
+    eind: "2026-11-06T23:30",
+    locatie: "Geheim 🤫",
+    locatieAgenda: "Geheim, Erim haalt je op",
+    ophalen: "Ik haal je om 18:30 op",
+    dresscode: "Mooi, maar wel lekker zitten",
+    meenemen: "Alleen jezelf (en honger)",
+  },
+
+  brieven: [
+    { als: "je een slechte dag hebt", tekst: "Ik ben trots op je, ook op dagen dat jij dat niet bent. Bel me, ik kom met snacks." },
+    { als: "je me mist", tekst: "Ik jou waarschijnlijk nog meer. Stuur me een selfie, dan stuur ik er een lelijke terug." },
+    { als: "je niet kan slapen", tekst: "Denk aan iets leuks dat we samen gaan doen. Of tel mijn slechte grappen, dat duurt wel even." },
+    { als: "je boos op me bent", tekst: "Je hebt waarschijnlijk gelijk. Deze brief is goed voor één gratis excuus + knuffel." },
+    { als: "je moet lachen", tekst: "Weet je nog die keer dat… (vul hier jullie grappigste herinnering in)" },
+    { als: "je twijfelt aan jezelf", tekst: "Jij bent slim, sterk en veel te mooi voor deze wereld. Dat is geen mening, dat is een feit." },
+  ],
+
+  bonnen: [
+    { emoji: "🥐", titel: "Ontbijt op bed", sub: "Inclusief koffie precies zoals jij 'm wil" },
+    { emoji: "🎬", titel: "Jij kiest de film", sub: "Zonder dat ik zeur. Ook niet over romcoms." },
+    { emoji: "🥮", titel: "Een doos baklava", sub: "Van Serifoğlu. Waar het allemaal begon." },
+    { emoji: "🍕", titel: "Eten naar keuze", sub: "Ik betaal, jij kiest, ik zeg niks" },
+    { emoji: "🧹", titel: "Ik doe de afwas", sub: "Een hele week lang" },
+    { emoji: "🏆", titel: "Jij wint de discussie", sub: "Eén keer. Kies verstandig." },
+  ],
+  bonnenTip: "Ingewisseld? Maak een screenshot en stuur 'm naar mij. Ik kom het regelen. 😌",
+
+  slot: "Dit is maar een klein websiteje, maar jij bent het grootste cadeau dat ik heb. Ik hou van je.",
+};
+/* ================================================================== */
+
+const $ = (s) => document.querySelector(s);
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+/* ---------- Teksten invullen ---------- */
+document.title = `Post voor ${CONFIG.naam} 💌`;
+$("#gateTitle").textContent = `Er is post voor ${CONFIG.naam}`;
+$("#heroName").textContent = CONFIG.naam;
+$("#question").textContent = CONFIG.vraag;
+$("#couponNote").textContent = CONFIG.bonnenTip;
+$("#closing").textContent = CONFIG.slot;
+$("#sig").textContent = `xxx ${CONFIG.van}`;
+
+/* ---------- Wachtwoord ---------- */
+let tries = 0;
+$("#envelope").addEventListener("click", () => $("#pw").focus());
+$("#pwForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const val = $("#pw").value.trim().toLowerCase();
+  if (val === CONFIG.wachtwoord.toLowerCase()) return openSite();
+  $("#hint").textContent = CONFIG.hints[Math.min(tries, CONFIG.hints.length - 1)];
+  tries++;
+  const f = $("#pwForm");
+  f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake");
+});
+
+function openSite() {
+  $("#pw").blur();
+  $("#envelope").classList.add("open");
+  $("#gateSub").textContent = "Klopt! Even openen…";
+  setTimeout(() => {
+    $("#gate").classList.add("gone");
+    playStory(startSite);
+  }, 900);
+}
+
+let siteStarted = false;
+function startSite() {
+  $("#site").removeAttribute("aria-hidden");
+  window.scrollTo(0, 0);
+  confetti(120);
+  if (siteStarted) return;
+  siteStarted = true;
+  typeLines(CONFIG.intro);
+  startHearts();
+}
+
+/* ---------- Verhaal-animatie ---------- */
+function person(x, y, o) {
+  const tag = o.label.length * 6 + 16;
+  const hairBack = o.long ? `<rect x="-21" y="-110" width="42" height="50" rx="17" fill="${o.hair}"/>` : "";
+  const box = o.box ? `<g transform="translate(4,-60)"><rect width="36" height="24" rx="3" fill="#fff" stroke="#c9a27a" stroke-width="2"/><rect x="16" width="4" height="24" fill="#d8445f"/><rect y="10" width="36" height="4" fill="#d8445f"/><circle cx="18" cy="2" r="5" fill="#d8445f"/></g>` : "";
+  return `<g transform="translate(${x},${y}) scale(${o.scale || 1})"><g class="bob" style="animation-delay:${o.delay || 0}s">
+    <rect x="-11" y="-32" width="8" height="32" rx="4" fill="#3b3a4f"/>
+    <rect x="3" y="-32" width="8" height="32" rx="4" fill="#3b3a4f"/>
+    ${hairBack}
+    <rect x="-18" y="-76" width="36" height="48" rx="15" fill="${o.shirt}"/>
+    <circle cx="0" cy="-92" r="17" fill="#e9b892"/>
+    <path d="M-17,-95 a17,17 0 0 1 34,0 q-9,-7 -17,-6 q-9,-1 -17,6z" fill="${o.hair}"/>
+    <circle cx="-6" cy="-91" r="2" fill="#2b1a14"/><circle cx="6" cy="-91" r="2" fill="#2b1a14"/>
+    <path d="M-5,-84 q5,4 10,0" stroke="#2b1a14" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <circle cx="-10" cy="-86" r="3" fill="#f29a9a" opacity=".55"/><circle cx="10" cy="-86" r="3" fill="#f29a9a" opacity=".55"/>
+    ${box}
+    <g transform="translate(0,-124)"><rect x="${-tag / 2}" y="-11" width="${tag}" height="18" rx="9" fill="#fff" opacity=".92"/>
+      <text y="2" text-anchor="middle" font-size="10" font-weight="700" fill="#3a1d22" font-family="DM Sans, sans-serif">${o.label}</text></g>
+  </g></g>`;
+}
+function bubble(x, y, text, d, tail = "left") {
+  const w = text.length * 5.7 + 22;
+  const tx = tail === "left" ? 18 : w - 26;
+  return `<g transform="translate(${x},${y})"><g class="pop" style="--d:${d}s">
+    <rect width="${w}" height="28" rx="14" fill="#fff" stroke="#3a1d22" stroke-width="1.5"/>
+    <path d="M${tx},27 l6,10 l6,-10" fill="#fff" stroke="#3a1d22" stroke-width="1.5" stroke-linejoin="round"/>
+    <rect x="${tx - 1}" y="25" width="14" height="3" fill="#fff"/>
+    <text x="${w / 2}" y="18" text-anchor="middle" font-size="11" font-weight="500" fill="#3a1d22" font-family="DM Sans, sans-serif">${text}</text>
+  </g></g>`;
+}
+const heart = (x, y, d, s = 1) => `<g transform="translate(${x},${y}) scale(${s})"><g class="heart-up" style="--d:${d}s"><path d="M0,4 C-7,-5 -15,3 0,15 C15,3 7,-5 0,4z" fill="#d8445f"/></g></g>`;
+
+function storyScenes() {
+  const V = CONFIG.verhaal;
+  const P = {
+    erim: { label: CONFIG.van, shirt: "#2f6f9f", hair: "#1f140f" },
+    lennart: { label: V.vriend, shirt: "#4f9a6a", hair: "#7a4f2a" },
+    amanda: { label: CONFIG.naam, shirt: "#d8445f", hair: "#3a2418", long: true },
+    vriendin: { label: V.vriendin, shirt: "#9b6fc4", hair: "#c8913f", long: true },
+  };
+  const svg = (inner, bg) => `<svg viewBox="0 0 360 260" xmlns="http://www.w3.org/2000/svg">${bg}${inner}</svg>`;
+
+  // 1. De toetjeszaak
+  let stripes = "", trays = "";
+  for (let i = 0; i < 10; i++) stripes += `<rect x="${40 + i * 28}" y="94" width="28" height="20" fill="${i % 2 ? "#fff" : "#d8445f"}"/><circle cx="${54 + i * 28}" cy="114" r="14" fill="${i % 2 ? "#fff" : "#d8445f"}" clip-path="url(#awn)"/>`;
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) trays += `<path transform="translate(${76 + c * 18 + (r % 2) * 9},${140 + r * 14})" d="M0,-6 L8,0 L0,6 L-8,0z" fill="#d9a441" stroke="#a8742a" stroke-width="1"/>`;
+  const s1 = svg(`
+    <circle cx="306" cy="44" r="20" fill="#ffd27a"/>
+    <rect x="40" y="40" width="280" height="174" fill="#f7efe4"/>
+    <rect x="58" y="52" width="244" height="36" rx="6" fill="#7a1f2b"/>
+    <text x="180" y="77" text-anchor="middle" font-family="Fraunces, serif" font-weight="700" font-size="20" letter-spacing="2" fill="#f5d48a">${V.winkel}</text>
+    <clipPath id="awn"><rect x="40" y="114" width="280" height="14"/></clipPath>
+    ${stripes}
+    <rect x="58" y="128" width="136" height="72" rx="4" fill="#fff7e6" stroke="#c9a27a" stroke-width="3"/>
+    ${trays}
+    <text x="126" y="194" text-anchor="middle" font-size="9" font-weight="700" fill="#a8742a" font-family="DM Sans, sans-serif">tatlı · baklava</text>
+    <rect x="222" y="128" width="62" height="86" rx="3" fill="#7a1f2b"/><circle cx="274" cy="174" r="3" fill="#f5d48a"/>
+    <rect x="0" y="214" width="360" height="46" fill="#e2cfb6"/>
+    <g class="walk-in">${person(120, 238, { ...P.lennart, scale: .9 })}${person(170, 238, { ...P.erim, box: true, scale: .9, delay: .2 })}</g>
+    ${bubble(190, 8, "Nog eentje erbij? 😋", 2.2, "left")}`,
+    `<rect width="360" height="260" fill="#bfe3f0"/>`);
+
+  // 2. Onderweg
+  let town = "";
+  const cols = ["#f4c7b8", "#cfe0c3", "#f7e2a8", "#c9d6ef"];
+  for (let k = 0; k < 2; k++) for (let i = 0; i < 4; i++) {
+    const x = k * 360 + i * 90 + 8, h = 70 + ((i * 37) % 40);
+    town += `<rect x="${x}" y="${200 - h}" width="72" height="${h}" fill="${cols[i]}"/>
+      <path d="M${x - 6},${200 - h} L${x + 36},${200 - h - 30} L${x + 78},${200 - h}z" fill="#9c5b52"/>
+      <rect x="${x + 12}" y="${214 - h}" width="16" height="16" fill="#fff6c8"/><rect x="${x + 44}" y="${214 - h}" width="16" height="16" fill="#fff6c8"/>
+      <rect x="${x + 84}" y="150" width="3" height="50" fill="#5b5266"/><circle cx="${x + 85}" cy="148" r="6" fill="#ffe08a"/>`;
+  }
+  const s2 = svg(`
+    <defs><linearGradient id="dusk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9b6e4"/><stop offset="1" stop-color="#ffcfb8"/></linearGradient></defs>
+    <rect width="360" height="260" fill="url(#dusk)"/>
+    <g class="scroll-bg">${town}</g>
+    <rect x="0" y="200" width="360" height="60" fill="#8d8798"/>
+    <line x1="0" y1="228" x2="360" y2="228" stroke="#fff" stroke-width="3" stroke-dasharray="20 14" opacity=".5"/>
+    ${person(150, 240, { ...P.lennart, scale: .9 })}${person(200, 240, { ...P.erim, box: true, scale: .9, delay: .2 })}
+    ${bubble(14, 20, "Denk je dat ze thuis zijn?", 1.0, "right")}
+    ${bubble(190, 56, "Voor baklava? Zeker weten.", 2.6, "left")}`, "");
+
+  // 3. Bij Amanda thuis
+  let stars3 = "";
+  for (let i = 0; i < 6; i++) stars3 += `<circle cx="${226 + (i * 23) % 100}" cy="${44 + (i * 17) % 50}" r="1.6" fill="#fff" class="twinkle" style="--d:${i * .3}s"/>`;
+  const s3 = svg(`
+    <rect x="210" y="30" width="120" height="90" rx="6" fill="#2d2a4a" stroke="#fff" stroke-width="6"/>${stars3}
+    <circle cx="300" cy="58" r="10" fill="#f6efd0"/>
+    <rect x="40" y="40" width="8" height="120" fill="#c9a27a"/><path d="M24,40 h40 l-8,-24 h-24z" fill="#f7e2a8"/>
+    ${person(118, 214, { ...P.vriendin, scale: .9 })}${person(222, 214, { ...P.amanda, scale: .9, delay: .25 })}
+    <rect x="76" y="168" width="188" height="56" rx="16" fill="#b5524f"/><rect x="66" y="160" width="22" height="64" rx="10" fill="#9f4542"/><rect x="252" y="160" width="22" height="64" rx="10" fill="#9f4542"/>
+    <rect x="0" y="224" width="360" height="36" fill="#d9b48f"/>
+    <g transform="translate(70,40)"><g class="pop" style="--d:1.1s"><g class="ring" style="--d:1.6s"><text font-family="Fraunces, serif" font-weight="700" font-size="24" fill="#d8445f" transform="rotate(-8)">🔔 DING DONG!</text></g></g></g>
+    ${bubble(118, 58, "Wie belt er nou? 👀", 2.4, "right")}`,
+    `<rect width="360" height="260" fill="#f3e1d6"/>`);
+
+  // 4. De deur gaat open
+  let stars4 = "";
+  for (let i = 0; i < 14; i++) stars4 += `<circle cx="${(i * 53) % 360}" cy="${12 + (i * 29) % 70}" r="1.5" fill="#fff" class="twinkle" style="--d:${i * .2}s"/>`;
+  const s4 = svg(`${stars4}
+    <circle cx="320" cy="34" r="14" fill="#f6efd0"/>
+    <rect x="150" y="70" width="210" height="150" fill="#e8c9b5"/><path d="M140,70 L255,20 L370,70z" fill="#8b4a46"/>
+    <rect x="180" y="104" width="70" height="116" fill="#ffd98a"/>
+    ${person(215, 220, { ...P.amanda, scale: .9 })}
+    <rect class="door" x="180" y="104" width="70" height="116" fill="#6b3a35"/>
+    <rect x="296" y="110" width="40" height="40" fill="#ffd98a" stroke="#6b3a35" stroke-width="4"/>
+    <rect x="0" y="220" width="360" height="40" fill="#5b5266"/>
+    ${person(62, 240, { ...P.lennart, scale: .9, delay: .2 })}${person(118, 240, { ...P.erim, box: true, scale: .9 })}
+    ${bubble(46, 70, "Wij hebben baklava! 🥮", 2.1, "right")}
+    ${heart(160, 150, 2.6)}${heart(176, 128, 3.1, .8)}${heart(148, 118, 3.6, .7)}${heart(168, 168, 4.1, .9)}`,
+    `<rect width="360" height="260" fill="#2d2a4a"/>`);
+
+  const days = Math.floor((Date.now() - since) / 864e5).toLocaleString("nl-NL");
+  const startText = since.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+
+  return [
+    { html: s1, cap: "Het begon allemaal bij Serifoğlu…", cap2: `${CONFIG.van} en ${V.vriend} haalden baklava.`, dur: 5200 },
+    { html: s2, cap: "Missie: baklava bezorgen 📦", cap2: "Bij twee meiden die nog van niks wisten.", dur: 5000 },
+    { html: s3, cap: `Ondertussen, bij ${CONFIG.naam} thuis…`, cap2: "Gewoon een rustige avond. Dachten ze.", dur: 5000 },
+    { html: s4, cap: "En toen ging de deur open…", cap2: `${CONFIG.van} had baklava. ${CONFIG.naam} had meteen zijn hart.`, dur: 6000 },
+    { html: `<div class="finale"><div class="when">${startText}</div><h2>Zo begon het.</h2><div class="later">${days} dagen later…</div></div>`, dur: 4200 },
+  ];
+}
+
+let storyTimers = [];
+function playStory(onDone) {
+  const st = $("#story"), stage = $("#stage"), bar = $("#storyBar");
+  const scenes = storyScenes();
+  stage.innerHTML = scenes.map((s) => `<div class="scene">${s.html}${s.cap ? `<p class="cap">${s.cap}</p><p class="cap2">${s.cap2}</p>` : ""}</div>`).join("");
+  const els = stage.querySelectorAll(".scene");
+  const total = scenes.reduce((a, s) => a + s.dur, 0);
+  storyTimers.forEach(clearTimeout); storyTimers = [];
+  st.classList.remove("hidden", "gone");
+
+  bar.style.transition = "none"; bar.style.width = "0";
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bar.style.transition = `width ${total}ms linear`; bar.style.width = "100%";
+  }));
+
+  let t = 0;
+  scenes.forEach((s, i) => {
+    storyTimers.push(setTimeout(() => { els.forEach((e) => e.classList.remove("active")); els[i].classList.add("active"); }, t));
+    t += s.dur;
+  });
+  const finish = () => {
+    storyTimers.forEach(clearTimeout); storyTimers = [];
+    st.classList.add("gone");
+    setTimeout(() => { st.classList.add("hidden"); stage.innerHTML = ""; }, 800);
+    onDone && onDone();
+  };
+  storyTimers.push(setTimeout(finish, t));
+  $("#skip").onclick = finish;
+}
+$("#replay").addEventListener("click", () => playStory(() => confetti(80)));
+
+/* ---------- Typemachine ---------- */
+async function typeLines(lines) {
+  const el = $("#typed");
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (let c = 0; c <= line.length; c++) { el.textContent = line.slice(0, c); await wait(45); }
+    if (i < lines.length - 1) {
+      await wait(1300);
+      for (let c = line.length; c >= 0; c--) { el.textContent = line.slice(0, c); await wait(18); }
+      await wait(250);
+    }
+  }
+}
+
+/* ---------- Zwevende hartjes ---------- */
+function startHearts() {
+  const icons = ["❤️", "💕", "💗", "✨", "🌸"];
+  setInterval(() => {
+    const h = document.createElement("div");
+    h.className = "floaty";
+    h.textContent = icons[Math.floor(Math.random() * icons.length)];
+    h.style.left = Math.random() * 100 + "vw";
+    h.style.top = "100vh";
+    h.style.animationDuration = 8 + Math.random() * 6 + "s";
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 15000);
+  }, 1400);
+}
+
+/* ---------- Teller ---------- */
+const since = new Date(CONFIG.samenSinds);
+$("#sinceText").textContent = since.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+function tick() {
+  let s = Math.max(0, Math.floor((Date.now() - since) / 1000));
+  const d = Math.floor(s / 86400); s -= d * 86400;
+  const h = Math.floor(s / 3600); s -= h * 3600;
+  const m = Math.floor(s / 60); s -= m * 60;
+  $("#cD").textContent = d.toLocaleString("nl-NL");
+  $("#cH").textContent = h; $("#cM").textContent = m; $("#cS").textContent = s;
+  const totalH = Math.floor((Date.now() - since) / 3.6e6);
+  $("#fact").textContent = `Dat is ${totalH.toLocaleString("nl-NL")} uur waarin ik ${CONFIG.naam} leuk vind. Ongeveer ${Math.round(totalH * 0.6).toLocaleString("nl-NL")} daarvan wakker.`;
+}
+tick(); setInterval(tick, 1000);
+
+/* ---------- Ja / Nee ---------- */
+let noCount = 0;
+const no = $("#no"), yes = $("#yes"), arena = $("#arena");
+function dodge(e) {
+  if (e) e.preventDefault();
+  noCount++;
+  no.classList.add("loose");
+  const a = arena.getBoundingClientRect();
+  const maxX = Math.max(0, a.width - no.offsetWidth);
+  const maxY = Math.max(0, a.height - no.offsetHeight);
+  no.style.left = Math.random() * maxX + "px";
+  no.style.top = Math.random() * maxY + "px";
+  no.textContent = CONFIG.neeTeksten[Math.min(noCount, CONFIG.neeTeksten.length - 1)];
+  const grow = 1 + noCount * 0.15;
+  yes.style.transform = `scale(${Math.min(grow, 1.8)})`;
+  if (noCount >= CONFIG.neeTeksten.length + 2) {
+    no.textContent = "Ja 🙃";
+    no.onclick = sayYes;
+    no.removeEventListener("pointerenter", dodge);
+    no.removeEventListener("pointerdown", dodge);
+  }
+}
+no.addEventListener("pointerenter", dodge);
+no.addEventListener("pointerdown", dodge);
+function sayYes() {
+  $("#answer").textContent = CONFIG.jaAntwoord;
+  arena.classList.add("hidden");
+  showTicket();
+  confetti(220);
+  store.set("zeiJa", true);
+  setTimeout(() => $("#ticketSection").scrollIntoView({ behavior: "smooth" }), 900);
+}
+yes.addEventListener("click", sayYes);
+
+/* ---------- Ticket ---------- */
+const D = CONFIG.date;
+const dStart = new Date(D.start), dEnd = new Date(D.eind);
+const dDateText = dStart.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+const dTimeText = dStart.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+const daysTogether = Math.floor((dStart - since) / 864e5);
+const ticketNo = `Nº ${String(daysTogether).padStart(4, "0")} · DAG ${daysTogether} SAMEN`;
+
+function showTicket() {
+  $("#tTitle").textContent = D.titel;
+  $("#tName").textContent = CONFIG.naam;
+  $("#tDate").textContent = dDateText;
+  $("#tTime").textContent = dTimeText;
+  $("#tLoc").textContent = D.locatie;
+  $("#tPick").textContent = D.ophalen;
+  $("#tDress").textContent = D.dresscode;
+  $("#tBring").textContent = D.meenemen;
+  $("#tNo").textContent = ticketNo;
+  $("#ticketSection").classList.remove("hidden");
+}
+
+// Tekent het ticket als afbeelding (1080x1920, past mooi als foto/achtergrond)
+async function ticketImage() {
+  await document.fonts.ready;
+  const W = 1080, H = 1920, c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  const serif = "Fraunces, Georgia, serif", sans = "'DM Sans', system-ui, sans-serif";
+  g.fillStyle = "#fbf3ec"; g.fillRect(0, 0, W, H);
+
+  const x = 90, y = 230, w = W - 180, h = 1460, r = 56, tearY = y + 520;
+  g.fillStyle = "#d8445f";
+  g.beginPath(); g.roundRect(x, y, w, h, r); g.fill();
+  // inkepingen
+  g.fillStyle = "#fbf3ec";
+  [x, x + w].forEach((cx) => { g.beginPath(); g.arc(cx, tearY, 44, 0, Math.PI * 2); g.fill(); });
+  g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 4; g.setLineDash([18, 14]);
+  g.beginPath(); g.moveTo(x + 70, tearY); g.lineTo(x + w - 70, tearY); g.stroke(); g.setLineDash([]);
+
+  g.fillStyle = "#3a1d22"; g.textAlign = "center";
+  g.font = `700 34px ${sans}`; g.fillText("DATE NIGHT  ·  OFFICIEEL BEVESTIGD", W / 2, 150);
+
+  g.textAlign = "left"; g.fillStyle = "#fff";
+  const px = x + 70;
+  g.globalAlpha = .8; g.font = `700 30px ${sans}`; g.fillText("TOEGANGSBEWIJS · 1 PERSOON", px, y + 120); g.globalAlpha = 1;
+  g.font = `700 104px ${serif}`;
+  wrap(g, D.titel, px, y + 250, w - 140, 110);
+  g.font = `italic 400 58px ${serif}`; g.fillText(`voor ${CONFIG.naam}`, px, y + 440);
+
+  const rows = [["DATUM", dDateText], ["TIJD", dTimeText], ["LOCATIE", D.locatie], ["OPHALEN", D.ophalen], ["DRESSCODE", D.dresscode], ["MEENEMEN", D.meenemen]];
+  const colW = (w - 140 - 40) / 2;
+  rows.forEach(([k, v], i) => {
+    const cx = px + (i % 2) * (colW + 40), cy = tearY + 110 + Math.floor(i / 2) * 200;
+    g.globalAlpha = .75; g.font = `700 26px ${sans}`; g.fillText(k, cx, cy); g.globalAlpha = 1;
+    g.font = `700 40px ${sans}`; wrap(g, v, cx, cy + 54, colW, 48);
+  });
+
+  // nep-barcode
+  const by = y + h - 240, bw = w - 140;
+  g.fillStyle = "#fff"; g.beginPath(); g.roundRect(px, by, bw, 140, 14); g.fill();
+  g.fillStyle = "#3a1d22";
+  let bx = px + 24, seed = daysTogether + 7;
+  while (bx < px + bw - 24) {
+    seed = (seed * 9301 + 49297) % 233280;
+    const bar = 3 + (seed % 4) * 3;
+    g.fillRect(bx, by + 20, bar, 100);
+    bx += bar + 4 + (seed % 3) * 3;
+  }
+  g.fillStyle = "#fff"; g.textAlign = "center"; g.globalAlpha = .85;
+  g.font = `700 28px ${sans}`; g.fillText(ticketNo, W / 2, by + 196); g.globalAlpha = 1;
+
+  g.fillStyle = "#a92c45"; g.font = `italic 400 48px ${serif}`;
+  g.fillText(`Geldig met een kus — ${CONFIG.van} ❤️`, W / 2, H - 120);
+
+  return new Promise((res) => c.toBlob(res, "image/png"));
+}
+function wrap(g, text, x, y, maxW, lh) {
+  const words = String(text).split(" "); let line = "";
+  for (const wd of words) {
+    const test = line ? line + " " + wd : wd;
+    if (g.measureText(test).width > maxW && line) { g.fillText(line, x, y); line = wd; y += lh; }
+    else line = test;
+  }
+  g.fillText(line, x, y);
+}
+
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+$("#dlTicket").addEventListener("click", async () => {
+  const blob = await ticketImage();
+  const file = new File([blob], `date-ticket-${CONFIG.naam.toLowerCase()}.png`, { type: "image/png" });
+  // Op iPhone opent dit het deelmenu met "Bewaar afbeelding"
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: "Mijn dateticket" }); return; }
+    catch (e) { if (e.name === "AbortError") return; }
+  }
+  saveBlob(blob, file.name);
+});
+
+$("#addCal").addEventListener("click", () => {
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const esc = (s) => String(s).replace(/([,;\\])/g, "\\$1");
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//voor-amanda//NL", "BEGIN:VEVENT",
+    `UID:date-${fmt(dStart)}@voor-amanda`, `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(dStart)}`, `DTEND:${fmt(dEnd)}`,
+    `SUMMARY:${esc(D.titel + " met " + CONFIG.van + " ❤️")}`,
+    `LOCATION:${esc(D.locatieAgenda)}`,
+    `DESCRIPTION:${esc(`${D.ophalen}. Dresscode: ${D.dresscode}. Meenemen: ${D.meenemen}.`)}`,
+    "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:Over 2 uur je date! Tijd om je klaar te maken 💄", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  saveBlob(new Blob([ics], { type: "text/calendar" }), "date.ics");
+});
+
+// Al eerder ja gezegd? Dan staat het ticket er meteen
+if (store.get("zeiJa")) { $("#answer").textContent = CONFIG.jaAntwoord; arena.classList.add("hidden"); showTicket(); }
+
+/* ---------- Brieven ---------- */
+CONFIG.brieven.forEach((b) => {
+  const el = document.createElement("div");
+  el.className = "letter";
+  el.innerHTML = `<div class="letter-inner">
+      <div class="face front"><small>Open als</small><strong></strong></div>
+      <div class="face back"></div>
+    </div>`;
+  el.querySelector("strong").textContent = b.als;
+  el.querySelector(".back").textContent = b.tekst;
+  el.addEventListener("click", () => el.classList.toggle("flipped"));
+  $("#letters").appendChild(el);
+});
+
+/* ---------- Bonnen ---------- */
+const used = store.get("bonnen") || {};
+CONFIG.bonnen.forEach((b, i) => {
+  const el = document.createElement("div");
+  el.className = "coupon" + (used[i] ? " used" : "");
+  el.innerHTML = `<div class="emoji"></div>
+    <div class="txt"><strong></strong><span></span></div>
+    <button class="btn">Inwisselen</button>
+    <div class="stamp">INGEWISSELD</div>`;
+  el.querySelector(".emoji").textContent = b.emoji;
+  el.querySelector("strong").textContent = b.titel;
+  el.querySelector("span").textContent = b.sub;
+  el.querySelector("button").addEventListener("click", () => {
+    if (!confirm(`"${b.titel}" nu inwisselen? Je kan 'm maar één keer gebruiken!`)) return;
+    used[i] = true; store.set("bonnen", used);
+    el.classList.add("used");
+    confetti(80);
+  });
+  $("#coupons").appendChild(el);
+});
+
+/* ---------- Hart onderaan ---------- */
+$("#bigHeart").addEventListener("click", () => confetti(150, ["❤️"]));
+
+/* ---------- Scroll reveal ---------- */
+const io = new IntersectionObserver((entries) => {
+  entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
+}, { threshold: 0.2 });
+document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+
+/* ---------- Confetti ---------- */
+const cv = $("#confetti"), cx = cv.getContext("2d");
+let parts = [], running = false;
+function resize() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; cx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); }
+addEventListener("resize", resize); resize();
+function confetti(n, emojis) {
+  const colors = ["#d8445f", "#f6d3d6", "#e0a84f", "#ff8fa3", "#ffffff"];
+  for (let i = 0; i < n; i++) {
+    parts.push({
+      x: innerWidth / 2 + (Math.random() - 0.5) * 80, y: innerHeight * 0.45,
+      vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 14 - 4,
+      r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+      s: 6 + Math.random() * 6, c: colors[i % colors.length],
+      e: emojis ? emojis[i % emojis.length] : null, life: 0,
+    });
+  }
+  if (!running) { running = true; requestAnimationFrame(loop); }
+}
+function loop() {
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  parts.forEach((p) => {
+    p.vy += 0.35; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r);
+    if (p.e) { cx.font = `${p.s * 2.4}px serif`; cx.fillText(p.e, 0, 0); }
+    else { cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); }
+    cx.restore();
+  });
+  parts = parts.filter((p) => p.y < innerHeight + 40 && p.life < 400);
+  if (parts.length) requestAnimationFrame(loop); else { running = false; cx.clearRect(0, 0, innerWidth, innerHeight); }
+}
+</script>
+</body>
+</html>
